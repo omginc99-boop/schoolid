@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SchoolID
 
-## Getting Started
+**The Digital Operating System for Education** — One Platform. Every School. Every Stage.
 
-First, run the development server:
+An [Agodi Technologies](https://agoditechnologies.com) product. Multi-tenant SaaS for nurseries through universities: student information, learning, fees & payments, verified digital identity (QR ID cards), role-based dashboards for 12 roles, and Claude-powered AI — in one app.
+
+## Stack
+
+Next.js 16 · React 19 · TypeScript · Tailwind 4 · Supabase (Postgres + RLS + Auth) · Claude API · Vercel · installable PWA
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [docs/PRD.md](docs/PRD.md) | Product requirements — vision, roles, modules, compliance |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, tenancy ladder, scale plan |
+| [docs/DATABASE.md](docs/DATABASE.md) | Database design & RLS strategy |
+| [docs/FOLDER-STRUCTURE.md](docs/FOLDER-STRUCTURE.md) | Codebase layout & conventions |
+| [docs/DESIGN.md](docs/DESIGN.md) | Design system, tokens, screen blueprints |
+
+## Quickstart
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3027
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs without configuration and shows setup guidance on the sign-in page. To make it fully live:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Database (Supabase)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a project at [supabase.com](https://supabase.com)
+2. SQL Editor → run **`supabase/schema.sql`** (tables, RLS, functions, triggers)
+3. SQL Editor → run **`supabase/seed.sql`** (Demo Academy — a fully populated school)
+4. Authentication → Providers → ensure **Email** is enabled.
+   For fastest testing, disable "Confirm email"; for production, set the **Site URL** to your live domain and wire Resend SMTP (Agodi email-infra standard).
 
-## Learn More
+### 2. Environment
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` → `.env.local` and fill:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+ANTHROPIC_API_KEY=<key>          # AI Tutor, Lesson Planner, Report Writer, …
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Set the same three in Vercel → Project → Settings → Environment Variables.
 
-## Deploy on Vercel
+### 3. Try Demo Academy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Sign up in the app with any seeded email — the profile links automatically:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Role | Email |
+|---|---|
+| Principal | `principal@demo.schoolid.africa` |
+| Teacher | `teacher.math@demo.schoolid.africa` |
+| Parent (2 children) | `parent1@demo.schoolid.africa` |
+| Student | `student1@demo.schoolid.africa` |
+| Finance | `finance@demo.schoolid.africa` |
+| Librarian / Transport / Security / Counselor / Registrar | `librarian@…` / `driver@…` / `security@…` / `counselor@…` / `registrar@…` |
+| **Super Admin (platform)** | `info@agoditechnologies.com` |
+
+Or register a brand-new school at `/register` — self-serve tenant provisioning, no service key required.
+
+## Key surfaces
+
+- `/` — marketing site · `/login` · `/register` (creates a tenant)
+- `/dashboard` — one URL, twelve dashboards; the role router picks by profile
+- `/dashboard/id` — digital ID card with QR
+- `/verify/<token>` — **public** identity verification (what a QR scan opens)
+- `/api/ai` — all AI features (mode-based, role-gated)
+- `/api/health` — uptime probe
+
+## Security model
+
+RBAC is enforced in **the database** via Row-Level Security — every tenant row carries `school_id`, and policies derive the caller's school + role from their JWT. The UI hides what you can't do; Postgres prevents it. Payments ledger is append-only; audit log is insert-only; counselor case notes are restricted to counselor + principal.
+
+## Deployment
+
+Pushed to GitHub → auto-deploys on Vercel. Commit as `280646347+omginc99-boop@users.noreply.github.com` (Vercel blocks other authors silently).
