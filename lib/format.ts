@@ -1,15 +1,11 @@
-const CURRENCY_LOCALES: Record<string, string> = {
-  NGN: 'en-NG', ZAR: 'en-ZA', USD: 'en-US', GHS: 'en-GH', KES: 'en-KE',
-};
+import { currencySymbol } from './currencies';
 
 export function formatMoney(amount: number, currency = 'NGN'): string {
-  try {
-    return new Intl.NumberFormat(CURRENCY_LOCALES[currency] ?? 'en-US', {
-      style: 'currency', currency, maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${currency} ${Math.round(amount).toLocaleString()}`;
-  }
+  const symbol = currencySymbol(currency);
+  const value = Math.round(amount).toLocaleString('en');
+  // Letter-based symbols (KSh, FCFA, Le, …) read better with a space; ₦/R/$/E£ don't.
+  const spacer = /[a-z]$/i.test(symbol) ? ' ' : '';
+  return `${symbol}${spacer}${value}`;
 }
 
 export function formatDate(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions = {}): string {

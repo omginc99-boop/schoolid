@@ -7,6 +7,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import type { SchoolType } from '@/lib/types';
+import { AFRICAN_CURRENCIES, INTERNATIONAL_CURRENCIES, currencyForCountry } from '@/lib/currencies';
 import { AlertCircle, Building2, Loader2 } from 'lucide-react';
 
 const SCHOOL_TYPES: { value: SchoolType; label: string }[] = [
@@ -44,6 +45,8 @@ export default function RegisterSchoolPage() {
   const [type, setType] = useState<SchoolType>('secondary');
   const [country, setCountry] = useState('Nigeria');
   const [city, setCity] = useState('');
+  const [currency, setCurrency] = useState('NGN');
+  const [currencyTouched, setCurrencyTouched] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,6 +87,7 @@ export default function RegisterSchoolPage() {
         p_admin_name: adminName || 'School Administrator',
         p_country: country,
         p_city: city,
+        p_currency: currency,
       });
       if (rpcError) throw new Error(rpcError.message);
       if (!schoolId) throw new Error('School registration failed — please try again.');
@@ -181,13 +185,37 @@ export default function RegisterSchoolPage() {
                 <div>
                   <label htmlFor="country" className="text-sm font-medium">Country</label>
                   <input id="country" required className="input mt-1.5" value={country}
-                    onChange={e => setCountry(e.target.value)} disabled={busy} />
+                    onChange={e => {
+                      setCountry(e.target.value);
+                      if (!currencyTouched) setCurrency(currencyForCountry(e.target.value));
+                    }}
+                    disabled={busy} />
                 </div>
                 <div>
                   <label htmlFor="city" className="text-sm font-medium">City</label>
                   <input id="city" className="input mt-1.5" placeholder="e.g. Lagos" value={city}
                     onChange={e => setCity(e.target.value)} disabled={busy} />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="currency" className="text-sm font-medium">Billing currency</label>
+                <select id="currency" className="input mt-1.5" value={currency}
+                  onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value); }}
+                  disabled={busy}>
+                  <optgroup label="African currencies">
+                    {AFRICAN_CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="International">
+                    {INTERNATIONAL_CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</option>
+                    ))}
+                  </optgroup>
+                </select>
+                <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+                  Auto-matched to your country — every fee, invoice and dashboard uses this currency.
+                </p>
               </div>
 
               <button type="submit" className="btn btn-primary w-full !py-3" disabled={!configured || busy || checking}>

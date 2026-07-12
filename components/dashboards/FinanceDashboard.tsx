@@ -3,6 +3,7 @@ import type { SessionContext } from '@/lib/auth';
 import { StatCard, PanelCard, EmptyState, StatusBadge, ProgressRing } from '@/components/ui/primitives';
 import { SimpleBarChart } from '@/components/ui/charts';
 import { formatDate, formatMoney, pct } from '@/lib/format';
+import { currencySymbol } from '@/lib/currencies';
 import { Wallet, Receipt, AlertTriangle, Award } from 'lucide-react';
 
 export default async function FinanceDashboard({ ctx }: { ctx: SessionContext }) {
@@ -76,7 +77,7 @@ export default async function FinanceDashboard({ ctx }: { ctx: SessionContext })
 
       <div className="grid lg:grid-cols-3 gap-5">
         <PanelCard title="Collections — last 6 weeks" className="lg:col-span-2">
-          <SimpleBarChart data={weeks} xKey="label" yKey="amount" prefix={currency === 'NGN' ? '₦' : ''} />
+          <SimpleBarChart data={weeks} xKey="label" yKey="amount" prefix={currencySymbol(currency)} />
         </PanelCard>
 
         <PanelCard title="Collection rate">
