@@ -59,6 +59,7 @@ export interface Profile {
   schoolid_number: string | null;
   qr_token: string | null;
   verification_status: VerificationStatus;
+  idvero_ref: string | null;
   status: ProfileStatus;
   title: string | null;
   joined_on: string | null;

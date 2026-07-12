@@ -92,6 +92,7 @@ create table profiles (
   schoolid_number     text unique,
   qr_token            text unique,
   verification_status verification_status not null default 'unverified',
+  idvero_ref          text,   -- IDVero verification id (ver_xxx) for document checks
   status              profile_status not null default 'active',
   title               text,          -- e.g. 'Mathematics Teacher', 'JSS 2 Student'
   joined_on           date default current_date,

@@ -1,8 +1,16 @@
 import { requireSession } from '@/lib/auth';
 import { roleMeta } from '@/lib/roles';
 import IdCard from '@/components/identity/IdCard';
+import VerifyIdentity from '@/components/identity/VerifyIdentity';
 import { PanelCard } from '@/components/ui/primitives';
 import { Fingerprint, QrCode, ArrowRightLeft, Lock } from 'lucide-react';
+
+const COUNTRY_CODES: Record<string, string> = {
+  nigeria: 'NG', 'south africa': 'ZA', ghana: 'GH', kenya: 'KE', egypt: 'EG',
+  ethiopia: 'ET', tanzania: 'TZ', uganda: 'UG', rwanda: 'RW', senegal: 'SN',
+  cameroon: 'CM', zambia: 'ZM', zimbabwe: 'ZW', botswana: 'BW', namibia: 'NA',
+  morocco: 'MA', algeria: 'DZ', tunisia: 'TN',
+};
 
 export const metadata = { title: 'My SchoolID' };
 
@@ -31,6 +39,19 @@ export default async function IdPage() {
         verificationStatus={profile.verification_status}
         photoUrl={profile.people?.photo_url}
       />
+
+      {profile.verification_status !== 'document_verified' ? (
+        <PanelCard title="Upgrade to full verification">
+          <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
+            Verify a government-issued document to earn the highest trust level on your
+            SchoolID — it shows on every scan of your card.
+          </p>
+          <VerifyIdentity
+            hasPending={Boolean(profile.idvero_ref)}
+            defaultCountry={COUNTRY_CODES[(school?.country ?? '').trim().toLowerCase()] ?? 'NG'}
+          />
+        </PanelCard>
+      ) : null}
 
       <PanelCard title="How your SchoolID works">
         <ul className="space-y-4">

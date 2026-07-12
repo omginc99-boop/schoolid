@@ -92,6 +92,13 @@ export default function RegisterSchoolPage() {
       if (rpcError) throw new Error(rpcError.message);
       if (!schoolId) throw new Error('School registration failed — please try again.');
 
+      // Fire-and-forget: a welcome-email hiccup must never block onboarding.
+      fetch('/api/welcome-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId }),
+      }).catch(() => {});
+
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
