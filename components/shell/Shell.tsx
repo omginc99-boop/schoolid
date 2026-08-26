@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import { Avatar } from '@/components/ui/primitives';
 import { roleMeta } from '@/lib/roles';
 import type { UserRole } from '@/lib/types';
-import { LayoutDashboard, QrCode, Sparkles, LogOut } from 'lucide-react';
+import { LayoutDashboard, QrCode, Sparkles, LogOut, ClipboardCheck, Users, Settings2 } from 'lucide-react';
 
 interface ShellProps {
   role: UserRole;
@@ -28,8 +28,16 @@ export default function Shell({
   const meta = roleMeta(role);
   const RoleIcon = meta.icon;
 
+  const canRegister = ['teacher', 'school_admin', 'principal'].includes(role);
+  const canManage = ['school_admin', 'principal', 'registrar'].includes(role);
+
   const nav = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+    ...(canRegister ? [{ href: '/dashboard/attendance', label: 'Attendance', icon: ClipboardCheck }] : []),
+    ...(canManage ? [
+      { href: '/dashboard/students', label: 'Students', icon: Users },
+      { href: '/dashboard/setup', label: 'School setup', icon: Settings2 },
+    ] : []),
     { href: '/dashboard/id', label: 'My SchoolID', icon: QrCode },
     ...(hasAi ? [{ href: '/dashboard/ai', label: 'AI Assistant', icon: Sparkles }] : []),
   ];
@@ -117,7 +125,7 @@ export default function Shell({
 
         {/* Bottom nav (mobile) */}
         <nav
-          className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around backdrop-blur-xl"
+          className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around overflow-x-auto backdrop-blur-xl"
           style={{
             background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
             borderTop: '1px solid var(--border)',
