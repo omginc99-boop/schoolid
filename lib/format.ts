@@ -1,10 +1,14 @@
-import { currencySymbol } from './currencies';
+import { currencyInfo } from './currencies';
 
 export function formatMoney(amount: number, currency = 'NGN'): string {
-  const symbol = currencySymbol(currency);
+  const info = currencyInfo(currency);
+  const symbol = info?.symbol ?? currency;
   const value = Math.round(amount).toLocaleString('en');
-  // Letter-based symbols (KSh, FCFA, Le, …) read better with a space; ₦/R/$/E£ don't.
-  const spacer = /[a-z]$/i.test(symbol) ? ' ' : '';
+  // Nordic/Slavic/SE-Asian conventions put the symbol after the amount.
+  if (info?.suffix) return `${value} ${symbol}`;
+  // Multi-letter symbols (KSh, FCFA, AED, Nu.) read better with a space;
+  // single letters and glyphs sit tight: R280,000 · ₦280,000 · R$280,000.
+  const spacer = symbol.length > 1 && /[a-z0-9.]$/i.test(symbol) ? ' ' : '';
   return `${symbol}${spacer}${value}`;
 }
 

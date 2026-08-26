@@ -7,7 +7,7 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import type { SchoolType } from '@/lib/types';
-import { AFRICAN_CURRENCIES, INTERNATIONAL_CURRENCIES, currencyForCountry } from '@/lib/currencies';
+import { CURRENCIES_BY_REGION, currencyForCountry } from '@/lib/currencies';
 import { AlertCircle, Building2, Loader2 } from 'lucide-react';
 
 const SCHOOL_TYPES: { value: SchoolType; label: string }[] = [
@@ -209,16 +209,13 @@ export default function RegisterSchoolPage() {
                 <select id="currency" className="input mt-1.5" value={currency}
                   onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value); }}
                   disabled={busy}>
-                  <optgroup label="African currencies">
-                    {AFRICAN_CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="International">
-                    {INTERNATIONAL_CURRENCIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</option>
-                    ))}
-                  </optgroup>
+                  {CURRENCIES_BY_REGION.map(group => (
+                    <optgroup key={group.region} label={group.region}>
+                      {group.currencies.map(c => (
+                        <option key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
                 <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
                   Auto-matched to your country — every fee, invoice and dashboard uses this currency.
