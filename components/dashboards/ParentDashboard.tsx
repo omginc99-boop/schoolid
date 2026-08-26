@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import type { SessionContext } from '@/lib/auth';
 import { StatCard, PanelCard, EmptyState, Avatar, ProgressRing } from '@/components/ui/primitives';
@@ -108,7 +109,8 @@ export default async function ParentDashboard({ ctx }: { ctx: SessionContext }) 
       {/* Per-child cards */}
       <div className="grid md:grid-cols-2 gap-5">
         {children.length ? children.map(c => (
-          <div key={c.profileId} className="card p-5">
+          <Link key={c.profileId} href={`/dashboard/child/${c.profileId}`}
+            className="card p-5 block hover:-translate-y-0.5 transition-transform">
             <div className="flex items-center gap-3">
               <Avatar name={c.name} size={44} />
               <div className="min-w-0 flex-1">
@@ -132,7 +134,10 @@ export default async function ParentDashboard({ ctx }: { ctx: SessionContext }) 
                 </p>
               </div>
             </div>
-          </div>
+            <p className="text-[13px] mt-3 font-semibold" style={{ color: 'var(--brand)' }}>
+              View full record →
+            </p>
+          </Link>
         )) : (
           <div className="card md:col-span-2">
             <EmptyState icon={GraduationCap} message="No children linked yet"

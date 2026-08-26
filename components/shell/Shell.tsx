@@ -9,7 +9,10 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import { Avatar } from '@/components/ui/primitives';
 import { roleMeta } from '@/lib/roles';
 import type { UserRole } from '@/lib/types';
-import { LayoutDashboard, QrCode, Sparkles, LogOut, ClipboardCheck, Users, Settings2 } from 'lucide-react';
+import {
+  LayoutDashboard, QrCode, Sparkles, LogOut, ClipboardCheck, Users, Settings2,
+  MessageSquare, Megaphone,
+} from 'lucide-react';
 
 interface ShellProps {
   role: UserRole;
@@ -38,6 +41,8 @@ export default function Shell({
       { href: '/dashboard/students', label: 'Students', icon: Users },
       { href: '/dashboard/setup', label: 'School setup', icon: Settings2 },
     ] : []),
+    { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+    { href: '/dashboard/announcements', label: 'Announcements', icon: Megaphone },
     { href: '/dashboard/id', label: 'My SchoolID', icon: QrCode },
     ...(hasAi ? [{ href: '/dashboard/ai', label: 'AI Assistant', icon: Sparkles }] : []),
   ];
