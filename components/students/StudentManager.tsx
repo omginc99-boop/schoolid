@@ -7,16 +7,27 @@ import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Avatar, EmptyState, StatusBadge } from '@/components/ui/primitives';
 import {
-  Loader2, UserPlus, Users, Upload, Check, AlertCircle, GraduationCap,
+  Loader2, UserPlus, Users, Upload, Check, AlertCircle, GraduationCap, Briefcase,
 } from 'lucide-react';
+import { roleMeta } from '@/lib/roles';
+import type { UserRole } from '@/lib/types';
 
 interface Opt { id: string; name: string }
 interface StudentRow {
   id: string; schoolid_number: string | null; email: string | null;
   verification_status: string; name: string; className: string;
 }
+interface StaffRow {
+  id: string; name: string; role: UserRole; title: string | null;
+  email: string | null; schoolid_number: string | null;
+}
 
-type Tab = 'list' | 'add' | 'bulk' | 'parent';
+const STAFF_ROLES: UserRole[] = [
+  'teacher', 'principal', 'school_admin', 'finance', 'librarian',
+  'transport', 'security', 'counselor', 'registrar',
+];
+
+type Tab = 'list' | 'add' | 'bulk' | 'parent' | 'staff';
 
 export default function StudentManager({ schoolId }: { schoolId: string }) {
   const [tab, setTab] = useState<Tab>('list');
@@ -24,6 +35,7 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
   const [yearId, setYearId] = useState<string | null>(null);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [parents, setParents] = useState<Opt[]>([]);
+  const [staff, setStaff] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +46,8 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
     const [{ data: cls }, { data: yr }, { data: profs }, { data: enr }] = await Promise.all([
       supabase.from('classes').select('id, name').eq('school_id', schoolId).order('name'),
       supabase.from('academic_years').select('id, is_current').eq('school_id', schoolId).order('starts_on', { ascending: false }),
-      supabase.from('profiles').select('id, role, schoolid_number, email, verification_status, people(full_name)')
-        .eq('school_id', schoolId).in('role', ['student', 'parent']).eq('status', 'active'),
+      supabase.from('profiles').select('id, role, title, schoolid_number, email, verification_status, people(full_name)')
+        .eq('school_id', schoolId).eq('status', 'active'),
       supabase.from('enrollments').select('student_profile_id, classes(name)').eq('school_id', schoolId).eq('status', 'active'),
     ]);
 
@@ -52,6 +64,11 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
     setParents(all.filter(p => p.role === 'parent').map(p => ({
       id: p.id, name: (p.people as { full_name?: string } | null)?.full_name ?? 'Parent',
     })));
+    setStaff(all.filter(p => STAFF_ROLES.includes(p.role as UserRole)).map(p => ({
+      id: p.id, role: p.role as UserRole, title: p.title as string | null,
+      email: p.email, schoolid_number: p.schoolid_number,
+      name: (p.people as { full_name?: string } | null)?.full_name ?? 'Staff',
+    })).sort((a, b) => a.name.localeCompare(b.name)));
     setLoading(false);
   }, [schoolId]);
 
@@ -59,7 +76,7 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
 
   /** Creates person → profile (SchoolID issued by trigger) → optional enrollment. */
   async function createPerson(opts: {
-    fullName: string; role: 'student' | 'parent'; email?: string;
+    fullName: string; role: UserRole; email?: string;
     classId?: string; title?: string;
   }): Promise<string> {
     const supabase = createClient();
@@ -91,6 +108,7 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
         {([
           ['list', 'Students', Users], ['add', 'Add student', UserPlus],
           ['bulk', 'Bulk add', Upload], ['parent', 'Parents', GraduationCap],
+          ['staff', 'Staff & teachers', Briefcase],
         ] as const).map(([k, label, Icon]) => (
           <button key={k} onClick={() => { setTab(k as Tab); setOk(null); setError(null); }}
             className={`btn ${tab === k ? 'btn-primary' : 'btn-outline'} !py-2 !px-3.5 !text-[13px]`}>
@@ -150,6 +168,16 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
           if (failures.length) setError(failures.slice(0, 3).join(' · '));
           await refresh(); setBusy(false);
         }} />
+      ) : tab === 'staff' ? (
+        <StaffPanel staff={staff} busy={busy} onAdd={async (name, email, role, title) => {
+          setBusy(true); setError(null); setOk(null);
+          try {
+            await createPerson({ fullName: name, role, email, title });
+            setOk(`${name} added as ${roleMeta(role).label}. They sign in with ${email || 'their email'} and their profile links automatically.`);
+            await refresh();
+          } catch (e) { setError(e instanceof Error ? e.message : 'Failed'); }
+          setBusy(false);
+        }} />
       ) : (
         <ParentLink parents={parents} students={students} busy={busy} schoolId={schoolId}
           onCreateParent={async (name, email) => {
@@ -168,6 +196,84 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
             if (error) setError(error.message); else setOk('Parent linked to child.');
             setBusy(false);
           }} />
+      )}
+    </div>
+  );
+}
+
+function StaffPanel({ staff, busy, onAdd }: {
+  staff: StaffRow[]; busy: boolean;
+  onAdd: (name: string, email: string, role: UserRole, title: string) => void;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<UserRole>('teacher');
+  const [title, setTitle] = useState('');
+  return (
+    <div className="space-y-4">
+      <form className="card p-5 space-y-4"
+        onSubmit={e => { e.preventDefault(); onAdd(name, email, role, title || roleMeta(role).label); setName(''); setEmail(''); setTitle(''); }}>
+        <h3 className="section-title">Add a staff member</h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label htmlFor="stname" className="text-sm font-medium">Full name</label>
+            <input id="stname" required className="input mt-1.5" placeholder="e.g. David Adekunle"
+              value={name} onChange={e => setName(e.target.value)} disabled={busy} />
+          </div>
+          <div>
+            <label htmlFor="stemail" className="text-sm font-medium">Email</label>
+            <input id="stemail" type="email" className="input mt-1.5" placeholder="teacher@school.edu"
+              value={email} onChange={e => setEmail(e.target.value)} disabled={busy} />
+          </div>
+          <div>
+            <label htmlFor="strole" className="text-sm font-medium">Role</label>
+            <select id="strole" className="input mt-1.5" value={role}
+              onChange={e => setRole(e.target.value as UserRole)} disabled={busy}>
+              {STAFF_ROLES.map(r => <option key={r} value={r}>{roleMeta(r).label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sttitle" className="text-sm font-medium">Job title (optional)</label>
+            <input id="sttitle" className="input mt-1.5" placeholder="Mathematics Teacher"
+              value={title} onChange={e => setTitle(e.target.value)} disabled={busy} />
+          </div>
+        </div>
+        <p className="text-xs" style={{ color: 'var(--muted)' }}>
+          Give the email they will sign in with — when they create an account with that address,
+          this profile links to them automatically and opens their role&apos;s dashboard.
+        </p>
+        <button type="submit" className="btn btn-primary" disabled={busy || !name}>
+          {busy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Add staff member
+        </button>
+      </form>
+
+      {staff.length ? (
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Name</th><th>Role</th><th>SchoolID</th><th>Email</th></tr></thead>
+            <tbody>
+              {staff.map(s => (
+                <tr key={s.id}>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={s.name} size={28} />
+                      <div>
+                        <p className="font-medium">{s.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--muted)' }}>{s.title}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span className="badge badge-brand">{roleMeta(s.role).label}</span></td>
+                  <td className="font-mono text-[13px]">{s.schoolid_number}</td>
+                  <td style={{ color: 'var(--muted)' }}>{s.email ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="card"><EmptyState icon={Briefcase} message="No staff yet"
+          hint="Add teachers first — they're needed before you can assign who teaches what." /></div>
       )}
     </div>
   );
