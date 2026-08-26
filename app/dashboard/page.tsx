@@ -4,6 +4,7 @@ import { requireSession } from '@/lib/auth';
 import type { UserRole } from '@/lib/types';
 import type { SessionContext } from '@/lib/auth';
 import type { ComponentType } from 'react';
+import WelcomeBanner from '@/components/onboarding/WelcomeBanner';
 
 import StudentDashboard from '@/components/dashboards/StudentDashboard';
 import ParentDashboard from '@/components/dashboards/ParentDashboard';
@@ -36,5 +37,18 @@ const DASHBOARDS: Record<UserRole, ComponentType<{ ctx: SessionContext }>> = {
 export default async function DashboardPage() {
   const ctx = await requireSession();
   const Dashboard = DASHBOARDS[ctx.profile.role] ?? StudentDashboard;
-  return <Dashboard ctx={ctx} />;
+  const fullName = ctx.profile.people?.full_name ?? 'there';
+
+  return (
+    <div className="space-y-5">
+      <WelcomeBanner
+        profileId={ctx.profile.id}
+        role={ctx.profile.role}
+        firstName={fullName.split(/\s+/)[0]}
+        schoolName={ctx.school?.name ?? 'SchoolID Platform'}
+        schoolidNumber={ctx.profile.schoolid_number ?? '—'}
+      />
+      <Dashboard ctx={ctx} />
+    </div>
+  );
 }

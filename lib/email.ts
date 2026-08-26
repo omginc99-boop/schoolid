@@ -71,6 +71,54 @@ function shell(bodyHtml: string, preheader: string): string {
 </html>`;
 }
 
+export interface UserWelcomeOpts {
+  to: string;
+  fullName: string;
+  roleLabel: string;
+  schoolName: string;
+  schoolidNumber: string;
+  appUrl: string;
+  intro: string;
+}
+
+/** The greeting's HTML, separated from sending so it can be previewed/tested. */
+export function renderUserWelcomeEmail(opts: UserWelcomeOpts): string {
+  const firstName = opts.fullName.split(/\s+/)[0] || 'there';
+  const body = `
+    <h1 style="margin:0 0 6px;font-size:24px;color:${INK};">Welcome, ${firstName} 👋</h1>
+    <p style="margin:0 0 20px;font-size:15px;color:${MUTED};line-height:1.65;">
+      You&rsquo;re now on SchoolID at <strong style="color:${INK};">${opts.schoolName}</strong>
+      as <strong style="color:${INK};">${opts.roleLabel}</strong>. ${opts.intro}
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:#eef0fe;border-radius:12px;margin-bottom:22px;">
+      <tr><td style="padding:16px 20px;">
+        <p style="margin:0;font-size:12px;color:${MUTED};text-transform:uppercase;letter-spacing:1px;">Your SchoolID</p>
+        <p style="margin:4px 0 0;font-size:20px;font-weight:700;font-family:Consolas,monospace;color:${BRAND};">${opts.schoolidNumber}</p>
+        <p style="margin:6px 0 0;font-size:13px;color:${MUTED};line-height:1.5;">
+          This number is yours for life. Your digital ID card and QR code are in the app under <strong>My SchoolID</strong>.
+        </p>
+      </td></tr>
+    </table>
+
+    <a href="${opts.appUrl}/dashboard" style="display:inline-block;background:${BRAND};color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:13px 28px;border-radius:10px;">Open SchoolID →</a>
+
+    <p style="margin:26px 0 0;font-size:13.5px;color:${MUTED};line-height:1.65;">
+      Signing in again? Go to <a href="${opts.appUrl}" style="color:${BRAND};">${opts.appUrl.replace(/^https?:\/\//, '')}</a> —
+      the same app opens the right screens for your role.
+    </p>`;
+  return shell(body, `You're on SchoolID at ${opts.schoolName}. Your SchoolID is ${opts.schoolidNumber}.`);
+}
+
+/** Greeting for an individual joining a school — teacher, parent, student, staff. */
+export async function sendUserWelcomeEmail(opts: UserWelcomeOpts): Promise<{ ok: boolean; error?: string }> {
+  return sendEmail(
+    opts.to,
+    `Welcome to SchoolID — ${opts.schoolName}`,
+    renderUserWelcomeEmail(opts),
+  );
+}
+
 export async function sendSchoolWelcomeEmail(opts: {
   to: string;
   adminName: string;

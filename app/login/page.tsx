@@ -64,10 +64,15 @@ function LoginForm() {
         return;
       }
       if (data.session) {
+        // Fire-and-forget: a greeting email must never delay getting into the app.
+        fetch('/api/welcome-user', { method: 'POST' }).catch(() => {});
         router.push('/dashboard');
         router.refresh();
       } else {
-        setNotice('Account created. Check your email to confirm your address, then sign in.');
+        setNotice(
+          'Account created. We sent a confirmation link to your email — open it, then come back and sign in. ' +
+          'If it does not arrive within a few minutes, check your spam folder or ask your school to confirm your account.',
+        );
         setMode('signin');
         setBusy(false);
       }
@@ -84,12 +89,12 @@ function LoginForm() {
         <div className="w-full max-w-md">
           <div className="card p-8">
             <h1 className="text-2xl font-bold tracking-tight">
-              {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+              {mode === 'signin' ? 'Welcome back' : 'Join your school on SchoolID'}
             </h1>
             <p className="text-sm mt-1.5" style={{ color: 'var(--muted)' }}>
               {mode === 'signin'
                 ? 'One login for every role — SchoolID opens the right dashboard for you.'
-                : 'If your school already added you, use the same email so your profile links automatically.'}
+                : 'Use the email address your school has for you. Your profile links itself, and your dashboard — student, parent, teacher or staff — opens automatically.'}
             </p>
 
             {notice ? (
