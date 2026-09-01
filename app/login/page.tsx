@@ -64,8 +64,8 @@ function LoginForm() {
         return;
       }
       if (data.session) {
-        // Fire-and-forget: a greeting email must never delay getting into the app.
-        fetch('/api/welcome-user', { method: 'POST' }).catch(() => {});
+        // The dashboard page sends the welcome email itself on first load —
+        // it fires regardless of which signup path got someone here.
         router.push('/dashboard');
         router.refresh();
       } else {

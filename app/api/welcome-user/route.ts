@@ -1,26 +1,14 @@
-// Personal welcome email for anyone who joins a school — teacher, parent,
-// student or staff. Called once after signup; everything is derived from the
-// verified session, nothing is trusted from the request body.
+// Manual trigger for the personal welcome email — teacher, parent, student
+// or staff. The dashboard page fires this automatically on first login;
+// this route exists for a future "resend welcome email" action. Everything
+// is derived from the verified session, nothing is trusted from the body.
+// Idempotency matches lib/welcome.ts: only the caller that flips
+// welcome_email_sent false -> true actually sends.
 import { NextResponse } from 'next/server';
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/server';
-import { isEmailConfigured, sendUserWelcomeEmail } from '@/lib/email';
+import { isEmailConfigured, sendUserWelcomeEmail, WELCOME_EMAIL_INTRO } from '@/lib/email';
 import { roleMeta } from '@/lib/roles';
 import type { UserRole } from '@/lib/types';
-
-const INTRO: Record<UserRole, string> = {
-  student: 'Your timetable, homework, results and digital ID are all waiting inside — and an AI tutor whenever you get stuck.',
-  parent: 'You can follow every child in one place: attendance, results, fees and school news — and message their teachers directly.',
-  teacher: 'Take the register in seconds, keep your gradebook in one place, and let AI draft your lesson plans and report comments.',
-  principal: 'Your whole school at a glance — enrollment, attendance, fee collection and the students who need attention first.',
-  school_admin: 'You manage the school record: academic years, classes, students and staff, all in one place.',
-  finance: 'Fees, invoices and collection tracking — you will always know what has come in and what is outstanding.',
-  librarian: 'The catalogue, loans and returns — with every borrower verified by their SchoolID.',
-  transport: 'Your routes, stops and pickup manifests, so every child is accounted for.',
-  security: 'Scan any SchoolID QR code at the gate to verify who a person is before they come in.',
-  counselor: 'Your wellbeing caseload, visible only to you and the principal.',
-  registrar: 'Admissions, certificates and alumni records — the official memory of the school.',
-  super_admin: 'Every school, subscription and audit trail across the SchoolID platform.',
-};
 
 export async function POST(request: Request) {
   if (!isSupabaseConfigured()) {
@@ -36,13 +24,22 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, schoolid_number, people(full_name), schools(name)')
+    .select('id, role, schoolid_number, welcome_email_sent, people(full_name), schools(name)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
   if (!profile) return NextResponse.json({ sent: false, reason: 'no-profile' });
+
+  const { data: claimed } = await supabase
+    .from('profiles')
+    .update({ welcome_email_sent: true })
+    .eq('id', profile.id)
+    .eq('welcome_email_sent', false)
+    .select('id')
+    .maybeSingle();
+  if (!claimed) return NextResponse.json({ sent: false, reason: 'already-sent' });
 
   const role = profile.role as UserRole;
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
@@ -53,7 +50,7 @@ export async function POST(request: Request) {
     roleLabel: roleMeta(role).label,
     schoolName: (profile.schools as { name?: string } | null)?.name ?? 'SchoolID',
     schoolidNumber: profile.schoolid_number ?? '—',
-    intro: INTRO[role] ?? INTRO.student,
+    intro: WELCOME_EMAIL_INTRO[role] ?? WELCOME_EMAIL_INTRO.student,
     appUrl,
   });
 

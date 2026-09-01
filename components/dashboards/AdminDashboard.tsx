@@ -4,7 +4,8 @@ import { StatCard, PanelCard, EmptyState, StatusBadge, Avatar } from '@/componen
 import { formatDate } from '@/lib/format';
 import { roleMeta } from '@/lib/roles';
 import type { UserRole } from '@/lib/types';
-import { GraduationCap, Users, BookOpen, Layers, CalendarDays, ToggleRight } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, Layers, CalendarDays, ToggleRight, UserPlus } from 'lucide-react';
+import StudentManager from '@/components/students/StudentManager';
 
 export default async function AdminDashboard({ ctx }: { ctx: SessionContext }) {
   const supabase = await createClient();
@@ -50,6 +51,22 @@ export default async function AdminDashboard({ ctx }: { ctx: SessionContext }) {
         <StatCard label="Classes" value={classesQ.count ?? 0} icon={Layers} />
         <StatCard label="Subjects" value={subjectsQ.count ?? 0} icon={BookOpen} />
       </div>
+
+      {/* Enroll people right from the dashboard: add students one-by-one or in
+          bulk, register parents and link families, and add teachers & staff.
+          Every person added is issued a verified SchoolID automatically. */}
+      <PanelCard
+        title="Enroll students & staff"
+        action={
+          <span className="badge badge-brand"><UserPlus size={12} /> SchoolID issued instantly</span>
+        }
+      >
+        <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>
+          Add students one at a time or in bulk, register parents and link families,
+          and add teachers &amp; staff — each person is issued a verified SchoolID automatically.
+        </p>
+        <StudentManager schoolId={sid} />
+      </PanelCard>
 
       <div className="grid lg:grid-cols-3 gap-5">
         <PanelCard title="Staff directory" className="lg:col-span-2">

@@ -93,6 +93,8 @@ create table profiles (
   qr_token            text unique,
   verification_status verification_status not null default 'unverified',
   idvero_ref          text,   -- IDVero verification id (ver_xxx) for document checks
+  afriid_ref          text,   -- AfriID user reference for KYC/biometric verifications
+  welcome_email_sent  boolean not null default false,
   status              profile_status not null default 'active',
   title               text,          -- e.g. 'Mathematics Teacher', 'JSS 2 Student'
   joined_on           date default current_date,

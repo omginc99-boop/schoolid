@@ -60,6 +60,8 @@ export interface Profile {
   qr_token: string | null;
   verification_status: VerificationStatus;
   idvero_ref: string | null;
+  afriid_ref: string | null;
+  welcome_email_sent: boolean;
   status: ProfileStatus;
   title: string | null;
   joined_on: string | null;

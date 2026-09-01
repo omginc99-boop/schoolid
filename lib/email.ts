@@ -2,6 +2,7 @@
 // Server-side only. Requires RESEND_API_KEY; EMAIL_FROM optional
 // (defaults to Resend's onboarding sender until the SchoolID domain
 // is verified at Resend).
+import type { UserRole } from './types';
 
 const BRAND = '#4f46e5';
 const BRAND_DARK = '#3730a3';
@@ -70,6 +71,22 @@ function shell(bodyHtml: string, preheader: string): string {
 </body>
 </html>`;
 }
+
+/** Role-specific opening line for the first-login welcome email. */
+export const WELCOME_EMAIL_INTRO: Record<UserRole, string> = {
+  student: 'Your timetable, homework, results and digital ID are all waiting inside — and an AI tutor whenever you get stuck.',
+  parent: 'You can follow every child in one place: attendance, results, fees and school news — and message their teachers directly.',
+  teacher: 'Take the register in seconds, keep your gradebook in one place, and let AI draft your lesson plans and report comments.',
+  principal: 'Your whole school at a glance — enrollment, attendance, fee collection and the students who need attention first.',
+  school_admin: 'You manage the school record: academic years, classes, students and staff, all in one place.',
+  finance: 'Fees, invoices and collection tracking — you will always know what has come in and what is outstanding.',
+  librarian: 'The catalogue, loans and returns — with every borrower verified by their SchoolID.',
+  transport: 'Your routes, stops and pickup manifests, so every child is accounted for.',
+  security: 'Scan any SchoolID QR code at the gate to verify who a person is before they come in.',
+  counselor: 'Your wellbeing caseload, visible only to you and the principal.',
+  registrar: 'Admissions, certificates and alumni records — the official memory of the school.',
+  super_admin: 'Every school, subscription and audit trail across the SchoolID platform.',
+};
 
 export interface UserWelcomeOpts {
   to: string;

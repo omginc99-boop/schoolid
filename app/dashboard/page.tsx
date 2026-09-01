@@ -1,6 +1,9 @@
 // The role router: one URL, twelve dashboards. The user's profile role
 // decides what renders — RLS in the database decides what data it can see.
+import { headers } from 'next/headers';
 import { requireSession } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+import { scheduleWelcomeEmailIfDue } from '@/lib/welcome';
 import type { UserRole } from '@/lib/types';
 import type { SessionContext } from '@/lib/auth';
 import type { ComponentType } from 'react';
@@ -34,10 +37,24 @@ const DASHBOARDS: Record<UserRole, ComponentType<{ ctx: SessionContext }>> = {
   super_admin: SuperAdminDashboard,
 };
 
+async function currentAppUrl(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const h = await headers();
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const host = h.get('host') ?? 'localhost:3027';
+  return `${proto}://${host}`;
+}
+
 export default async function DashboardPage() {
   const ctx = await requireSession();
   const Dashboard = DASHBOARDS[ctx.profile.role] ?? StudentDashboard;
   const fullName = ctx.profile.people?.full_name ?? 'there';
+
+  // First time this person ever reaches a dashboard, greet them by email —
+  // works whether they got an instant session at signup or had to confirm
+  // their email first. Runs after the response is sent; never blocks render.
+  const supabase = await createClient();
+  scheduleWelcomeEmailIfDue(supabase, ctx, await currentAppUrl());
 
   return (
     <div className="space-y-5">
