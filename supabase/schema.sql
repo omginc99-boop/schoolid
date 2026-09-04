@@ -682,8 +682,11 @@ grant execute on function public.register_school(text, text, school_type, text, 
 -- Triggers
 -- ---------------------------------------------------------------------------
 -- Issue SchoolID number + QR token on profile creation.
+-- search_path includes `extensions`: Supabase installs pgcrypto there, not
+-- in `public`, and gen_random_bytes() below would otherwise be invisible
+-- to this security-definer function.
 create or replace function public.assign_schoolid_identity()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security definer set search_path = public, extensions as $$
 declare n int; sl text;
 begin
   if new.school_id is not null and (new.schoolid_number is null or new.schoolid_number = '') then

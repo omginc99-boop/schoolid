@@ -33,6 +33,7 @@ export default function RegisterSchoolPage() {
 
   const [checking, setChecking] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
 
   // account fields (shown when not signed in)
   const [adminName, setAdminName] = useState('');
@@ -56,6 +57,7 @@ export default function RegisterSchoolPage() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       setSignedIn(Boolean(data.user));
+      setSignedInEmail(data.user?.email ?? null);
       setChecking(false);
     });
   }, [configured]);
@@ -138,28 +140,38 @@ export default function RegisterSchoolPage() {
             ) : null}
 
             <form onSubmit={submit} className="mt-6 space-y-4">
-              {!checking && !signedIn ? (
+              {!checking ? (
                 <fieldset className="space-y-4 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
                   <legend className="text-xs font-semibold uppercase tracking-wide pb-2" style={{ color: 'var(--muted)' }}>
                     Your administrator account
                   </legend>
+                  {signedIn ? (
+                    <p className="text-[13px] rounded-xl p-3" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
+                      You&apos;re already signed in{signedInEmail ? ` as ${signedInEmail}` : ''} — this school will be
+                      created under that account, so you just need the details below.
+                    </p>
+                  ) : null}
+                  {/* Always asked: the name is stored on the admin's SchoolID profile,
+                      even when the auth account already exists. */}
                   <div>
                     <label htmlFor="adminName" className="text-sm font-medium">Your full name</label>
                     <input id="adminName" required className="input mt-1.5" placeholder="e.g. Adaeze Nwosu"
                       value={adminName} onChange={e => setAdminName(e.target.value)} disabled={busy} />
                   </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="email" className="text-sm font-medium">Email</label>
-                      <input id="email" type="email" required className="input mt-1.5" placeholder="you@school.edu"
-                        value={email} onChange={e => setEmail(e.target.value)} disabled={busy} />
+                  {!signedIn ? (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="email" className="text-sm font-medium">Email</label>
+                        <input id="email" type="email" required className="input mt-1.5" placeholder="you@school.edu"
+                          value={email} onChange={e => setEmail(e.target.value)} disabled={busy} />
+                      </div>
+                      <div>
+                        <label htmlFor="password" className="text-sm font-medium">Password</label>
+                        <input id="password" type="password" required minLength={8} className="input mt-1.5" placeholder="Min. 8 characters"
+                          value={password} onChange={e => setPassword(e.target.value)} disabled={busy} />
+                      </div>
                     </div>
-                    <div>
-                      <label htmlFor="password" className="text-sm font-medium">Password</label>
-                      <input id="password" type="password" required minLength={8} className="input mt-1.5" placeholder="Min. 8 characters"
-                        value={password} onChange={e => setPassword(e.target.value)} disabled={busy} />
-                    </div>
-                  </div>
+                  ) : null}
                 </fieldset>
               ) : null}
 

@@ -98,9 +98,14 @@ function LoginForm() {
             </p>
 
             {notice ? (
-              <p className="mt-4 text-sm rounded-xl p-3" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
-                {notice}
-              </p>
+              <div className="mt-4 text-sm rounded-xl p-3" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>
+                <p>{notice}</p>
+                {params.get('unlinked') ? (
+                  <Link href="/register" className="btn btn-primary !py-2 !px-4 !text-[13px] mt-3">
+                    Register your school →
+                  </Link>
+                ) : null}
+              </div>
             ) : null}
             {error ? (
               <p className="mt-4 text-sm rounded-xl p-3 flex items-start gap-2" style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
