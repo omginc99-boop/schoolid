@@ -1,6 +1,6 @@
 // AfriID — identity verification via Smile ID, proxied through afriid.africa.
 // SchoolID calls AfriID's /api/verify or /api/verify-document endpoints.
-// Set AFRIID_URL + AFRIID_API_KEY in .env.local to activate.
+// Set AFRIID_URL + AFRIID_API_SECRET in .env.local to activate.
 
 export type AfriIDDocType = 'NATIONAL_ID' | 'PASSPORT' | 'DRIVERS_LICENCE' | 'VOTER_ID';
 
@@ -30,7 +30,7 @@ export interface AfriIDError {
 }
 
 const BASE = (process.env.AFRIID_URL ?? 'https://afriid.africa').replace(/\/+$/, '');
-const KEY = process.env.AFRIID_API_KEY;
+const KEY = process.env.AFRIID_API_SECRET;
 
 export function isAfriIDConfigured(): boolean {
   return Boolean(KEY && BASE);
@@ -61,7 +61,7 @@ export async function verifyIdNumber(opts: {
   userId?: string;
 }): Promise<AfriIDVerifyResponse | AfriIDError> {
   if (!isAfriIDConfigured()) {
-    return { ok: false, error: 'AfriID not configured (AFRIID_URL or AFRIID_API_KEY missing).' };
+    return { ok: false, error: 'AfriID not configured (AFRIID_URL or AFRIID_API_SECRET missing).' };
   }
 
   try {
@@ -99,7 +99,7 @@ export async function verifyDocument(opts: {
   userId?: string;
 }): Promise<AfriIDDocumentResponse | AfriIDError> {
   if (!isAfriIDConfigured()) {
-    return { ok: false, error: 'AfriID not configured (AFRIID_URL or AFRIID_API_KEY missing).' };
+    return { ok: false, error: 'AfriID not configured (AFRIID_URL or AFRIID_API_SECRET missing).' };
   }
 
   try {
