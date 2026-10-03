@@ -32,7 +32,7 @@ export default function Shell({
   const RoleIcon = meta.icon;
 
   const canRegister = ['teacher', 'school_admin', 'principal'].includes(role);
-  const canManage = ['school_admin', 'principal', 'registrar'].includes(role);
+  const canManage = ['school_admin', 'principal', 'registrar', 'teacher'].includes(role);
 
   const nav = [
     { href: '/dashboard', label: 'Overview', icon: LayoutDashboard },

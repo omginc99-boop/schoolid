@@ -6,7 +6,7 @@ export const metadata = { title: 'Students' };
 
 export default async function StudentsPage() {
   const ctx = await requireSession();
-  const allowed = ['school_admin', 'principal', 'registrar'];
+  const allowed = ['school_admin', 'principal', 'registrar', 'teacher'];
   if (!allowed.includes(ctx.profile.role) || !ctx.profile.school_id) redirect('/dashboard');
 
   return (
