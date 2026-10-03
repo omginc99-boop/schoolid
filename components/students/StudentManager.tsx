@@ -100,13 +100,21 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
     classId?: string; title?: string;
   }): Promise<string> {
     const supabase = createClient();
-    const { data: person, error: e1 } = await supabase
-      .from('people').insert({ full_name: opts.fullName }).select('id').single();
-    if (e1 || !person) throw new Error(e1?.message ?? 'Could not create person record');
+    // people_admin_write's RLS only makes a row visible once a linked profile
+    // exists — but that profile is the very next insert, so a brand-new
+    // person is invisible to itself. Asking Postgres to SELECT it back via
+    // .select() (as INSERT...RETURNING) trips that and fails as "violates
+    // row-level security policy" even though the insert itself is allowed.
+    // Generating the id client-side and skipping .select() avoids RETURNING
+    // entirely, sidestepping the chicken-and-egg visibility check.
+    const personId = crypto.randomUUID();
+    const { error: e1 } = await supabase
+      .from('people').insert({ id: personId, full_name: opts.fullName });
+    if (e1) throw new Error(e1.message ?? 'Could not create person record');
 
     const { data: profile, error: e2 } = await supabase
       .from('profiles').insert({
-        person_id: person.id, school_id: schoolId, role: opts.role,
+        person_id: personId, school_id: schoolId, role: opts.role,
         email: opts.email || null, verification_status: 'school_verified',
         title: opts.title ?? (opts.role === 'student' ? 'Student' : 'Parent'),
       }).select('id').single();
