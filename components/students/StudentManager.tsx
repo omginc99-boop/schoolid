@@ -22,6 +22,8 @@ interface StaffRow {
   email: string | null; schoolid_number: string | null;
 }
 
+const NEW_CLASS = '__new__';
+
 const STAFF_ROLES: UserRole[] = [
   'teacher', 'principal', 'school_admin', 'finance', 'librarian',
   'transport', 'security', 'counselor', 'registrar',
@@ -73,6 +75,24 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
   }, [schoolId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  /** Resolves a class picker value to a real class_id, creating the class
+   *  first if the school typed a brand-new name instead of picking one. */
+  async function ensureClassId(classId: string, newClassName?: string): Promise<string> {
+    if (classId !== NEW_CLASS) return classId;
+    const name = (newClassName ?? '').trim();
+    if (!name) throw new Error('Enter a name for the new class');
+    if (!yearId) throw new Error('Set up an academic year first, in School setup → Academic years');
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('classes')
+      .insert({ school_id: schoolId, academic_year_id: yearId, name })
+      .select('id')
+      .single();
+    if (error || !data) throw new Error(error?.message ?? 'Could not create class');
+    setClasses(prev => [...prev, { id: data.id, name }].sort((a, b) => a.name.localeCompare(b.name)));
+    return data.id;
+  }
 
   /** Creates person → profile (SchoolID issued by trigger) → optional enrollment. */
   async function createPerson(opts: {
@@ -148,25 +168,30 @@ export default function StudentManager({ schoolId }: { schoolId: string }) {
         <AddStudentForm classes={classes} busy={busy} onSubmit={async v => {
           setBusy(true); setError(null); setOk(null);
           try {
-            await createPerson({ fullName: v.name, role: 'student', email: v.email, classId: v.classId, title: v.title });
+            const classId = v.classId ? await ensureClassId(v.classId, v.newClassName) : undefined;
+            await createPerson({ fullName: v.name, role: 'student', email: v.email, classId, title: v.title });
             setOk(`${v.name} added and issued a SchoolID.`);
             await refresh();
           } catch (e) { setError(e instanceof Error ? e.message : 'Failed'); }
           setBusy(false);
         }} />
       ) : tab === 'bulk' ? (
-        <BulkAdd classes={classes} busy={busy} onSubmit={async (lines, classId) => {
+        <BulkAdd classes={classes} busy={busy} onSubmit={async (lines, classId, newClassName) => {
           setBusy(true); setError(null); setOk(null);
-          let added = 0; const failures: string[] = [];
-          for (const line of lines) {
-            const [name, email] = line.split(',').map(p => p.trim());
-            if (!name) continue;
-            try { await createPerson({ fullName: name, role: 'student', email, classId }); added++; }
-            catch (e) { failures.push(`${name}: ${e instanceof Error ? e.message : 'failed'}`); }
-          }
-          setOk(`${added} student${added === 1 ? '' : 's'} added${failures.length ? `; ${failures.length} failed` : ''}.`);
-          if (failures.length) setError(failures.slice(0, 3).join(' · '));
-          await refresh(); setBusy(false);
+          try {
+            const realClassId = await ensureClassId(classId, newClassName);
+            let added = 0; const failures: string[] = [];
+            for (const line of lines) {
+              const [name, email] = line.split(',').map(p => p.trim());
+              if (!name) continue;
+              try { await createPerson({ fullName: name, role: 'student', email, classId: realClassId }); added++; }
+              catch (e) { failures.push(`${name}: ${e instanceof Error ? e.message : 'failed'}`); }
+            }
+            setOk(`${added} student${added === 1 ? '' : 's'} added${failures.length ? `; ${failures.length} failed` : ''}.`);
+            if (failures.length) setError(failures.slice(0, 3).join(' · '));
+            await refresh();
+          } catch (e) { setError(e instanceof Error ? e.message : 'Failed'); }
+          setBusy(false);
         }} />
       ) : tab === 'staff' ? (
         <StaffPanel staff={staff} busy={busy} onAdd={async (name, email, role, title) => {
@@ -281,13 +306,19 @@ function StaffPanel({ staff, busy, onAdd }: {
 
 function AddStudentForm({ classes, busy, onSubmit }: {
   classes: Opt[]; busy: boolean;
-  onSubmit: (v: { name: string; email?: string; classId?: string; title?: string }) => void;
+  onSubmit: (v: { name: string; email?: string; classId?: string; newClassName?: string; title?: string }) => void;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [classId, setClassId] = useState(classes[0]?.id ?? '');
+  const [classId, setClassId] = useState(classes[0]?.id ?? NEW_CLASS);
+  const [newClassName, setNewClassName] = useState('');
+  const creatingNew = classId === NEW_CLASS;
   return (
-    <form className="card p-5 space-y-4" onSubmit={e => { e.preventDefault(); onSubmit({ name, email, classId }); setName(''); setEmail(''); }}>
+    <form className="card p-5 space-y-4" onSubmit={e => {
+      e.preventDefault();
+      onSubmit({ name, email, classId, newClassName: creatingNew ? newClassName : undefined });
+      setName(''); setEmail(''); setNewClassName('');
+    }}>
       <div className="grid sm:grid-cols-3 gap-4">
         <div>
           <label htmlFor="sname" className="text-sm font-medium">Full name</label>
@@ -302,16 +333,23 @@ function AddStudentForm({ classes, busy, onSubmit }: {
         <div>
           <label htmlFor="sclass" className="text-sm font-medium">Class</label>
           <select id="sclass" className="input mt-1.5" value={classId} onChange={e => setClassId(e.target.value)} disabled={busy}>
-            {classes.length ? classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-              : <option value="">— create a class first —</option>}
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value={NEW_CLASS}>+ Create new class…</option>
           </select>
         </div>
       </div>
+      {creatingNew && (
+        <div>
+          <label htmlFor="snewclass" className="text-sm font-medium">New class name</label>
+          <input id="snewclass" required className="input mt-1.5" placeholder="e.g. Kindergarten, KG1, Reception"
+            value={newClassName} onChange={e => setNewClassName(e.target.value)} disabled={busy} />
+        </div>
+      )}
       <p className="text-xs" style={{ color: 'var(--muted)' }}>
         The student is issued a SchoolID number and QR card automatically. If you give an email,
         they can sign in with it and their profile links itself.
       </p>
-      <button type="submit" className="btn btn-primary" disabled={busy || !name}>
+      <button type="submit" className="btn btn-primary" disabled={busy || !name || (creatingNew && !newClassName.trim())}>
         {busy ? <Loader2 size={15} className="animate-spin" /> : <UserPlus size={15} />} Add student
       </button>
     </form>
@@ -319,19 +357,34 @@ function AddStudentForm({ classes, busy, onSubmit }: {
 }
 
 function BulkAdd({ classes, busy, onSubmit }: {
-  classes: Opt[]; busy: boolean; onSubmit: (lines: string[], classId: string) => void;
+  classes: Opt[]; busy: boolean; onSubmit: (lines: string[], classId: string, newClassName?: string) => void;
 }) {
   const [text, setText] = useState('');
-  const [classId, setClassId] = useState(classes[0]?.id ?? '');
+  const [classId, setClassId] = useState(classes[0]?.id ?? NEW_CLASS);
+  const [newClassName, setNewClassName] = useState('');
+  const creatingNew = classId === NEW_CLASS;
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   return (
-    <form className="card p-5 space-y-4" onSubmit={e => { e.preventDefault(); onSubmit(lines, classId); setText(''); }}>
-      <div>
-        <label htmlFor="bclass" className="text-sm font-medium">Enroll all into class</label>
-        <select id="bclass" className="input mt-1.5 max-w-xs" value={classId} onChange={e => setClassId(e.target.value)} disabled={busy}>
-          {classes.length ? classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-            : <option value="">— create a class first —</option>}
-        </select>
+    <form className="card p-5 space-y-4" onSubmit={e => {
+      e.preventDefault();
+      onSubmit(lines, classId, creatingNew ? newClassName : undefined);
+      setText(''); setNewClassName('');
+    }}>
+      <div className="grid sm:grid-cols-2 gap-4 max-w-xl">
+        <div>
+          <label htmlFor="bclass" className="text-sm font-medium">Enroll all into class</label>
+          <select id="bclass" className="input mt-1.5" value={classId} onChange={e => setClassId(e.target.value)} disabled={busy}>
+            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value={NEW_CLASS}>+ Create new class…</option>
+          </select>
+        </div>
+        {creatingNew && (
+          <div>
+            <label htmlFor="bnewclass" className="text-sm font-medium">New class name</label>
+            <input id="bnewclass" required className="input mt-1.5" placeholder="e.g. Kindergarten, KG1, Reception"
+              value={newClassName} onChange={e => setNewClassName(e.target.value)} disabled={busy} />
+          </div>
+        )}
       </div>
       <div>
         <label htmlFor="blist" className="text-sm font-medium">Paste students — one per line</label>
@@ -343,7 +396,7 @@ function BulkAdd({ classes, busy, onSubmit }: {
           Straight from a spreadsheet column works.
         </p>
       </div>
-      <button type="submit" className="btn btn-primary" disabled={busy || !lines.length}>
+      <button type="submit" className="btn btn-primary" disabled={busy || !lines.length || (creatingNew && !newClassName.trim())}>
         {busy ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
         Add {lines.length || ''} student{lines.length === 1 ? '' : 's'}
       </button>
