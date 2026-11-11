@@ -53,12 +53,15 @@ async function main() {
     const inner = Math.round(size * 0.68);
     const pad = Math.round((size - inner) / 2);
     const out = path.join(outDir, `icon-maskable-${size}.png`);
-    await sharp(squared)
+    // sharp silently mis-sizes output when .resize() is called twice in one
+    // chain -- do the shrink+pad and the final exact-size resize as two
+    // separate pipelines via an intermediate buffer.
+    const padded = await sharp(squared)
       .resize(inner, inner)
       .extend({ top: pad, bottom: pad, left: pad, right: pad, extendWith: "copy" })
-      .resize(size, size)
       .png()
-      .toFile(out);
+      .toBuffer();
+    await sharp(padded).resize(size, size).png().toFile(out);
     console.log("wrote", out);
   }
 
