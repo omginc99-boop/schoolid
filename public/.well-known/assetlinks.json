@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.agoditechnologies.schoolid",
+        "sha256_cert_fingerprints": ["7A:02:B1:B4:03:3B:24:99:8F:3C:77:13:F7:3E:5E:6F:7A:41:E1:6E:71:6A:12:4D:32:F8:67:3C:4F:61:60:02"]
+      }
+    }]
