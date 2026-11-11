@@ -297,6 +297,7 @@ export default function LandingPage() {
             <span>SchoolID — an <span className="font-semibold">Agodi Technologies</span> product</span>
           </div>
           <div className="flex items-center gap-5">
+            <Link href="/privacy" className="hover:opacity-70">Privacy Policy</Link>
             <a href="mailto:info@agoditechnologies.com" className="hover:opacity-70">info@agoditechnologies.com</a>
             <a href="https://agoditechnologies.com" target="_blank" rel="noopener noreferrer" className="hover:opacity-70">agoditechnologies.com</a>
           </div>
